@@ -97,15 +97,6 @@ Security Features
 
 ⸻
 
-Technologies
-
-* HTML5
-* CSS3
-* JavaScript (ES6)
-* Web Crypto API
-* Git & GitHub
-
-⸻
 
 Research Paper
 
