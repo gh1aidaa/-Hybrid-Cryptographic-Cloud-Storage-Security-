@@ -60,7 +60,7 @@ Untrusted Cloud
 
 ⸻
 
-Security Features
+## Security Features
 
 * Zero-knowledge storage architecture
 * Client-side encryption
@@ -98,7 +98,7 @@ Security Features
 ⸻
 
 
-Research Paper
+## Research Paper
 
 Enhancing Cloud Storage Security Through Hybrid Cryptographic Techniques
 
@@ -115,7 +115,7 @@ Umm Al-Qura University
 
 ⸻
 
-My Contributions
+## My Contributions
 
 * System architecture design
 * Threat modeling
@@ -128,7 +128,7 @@ My Contributions
 
 ⸻
 
-References
+## References
 
 * Google Drive Client-Side Encryption
 * AWS Key Management Service (KMS)
