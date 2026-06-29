@@ -20,6 +20,8 @@ The protocol combines symmetric and asymmetric cryptography to support secure st
 | Master Key Derivation | PBKDF2-SHA256 (100,000 iterations) | Password-based key derivation |
 | File Key Derivation | HKDF-SHA256 | Per-file key generation |
 | Integrity Verification | AES-GCM Authentication Tag | Tamper detection |
+
+
 ⸻
 
 ## System Architecture
@@ -43,9 +45,8 @@ Untrusted Cloud
 ├── Encrypted Files
 ├── Wrapped Keys
 └── Metadata & Access Control
-``` 
+```
 
-Protocol Workflow
 
 1. User authentication derives a master key using PBKDF2.
 2. An RSA-3072 key pair is generated for each user.
@@ -92,6 +93,8 @@ Security Features
 | AES-GCM Encryption (1 KB) | ~0.15 ms |
 | AES-GCM Decryption (1 KB) | ~0.12 ms |
 | Complete Protocol Execution | ~8.4 ms |
+
+
 ⸻
 
 Technologies
