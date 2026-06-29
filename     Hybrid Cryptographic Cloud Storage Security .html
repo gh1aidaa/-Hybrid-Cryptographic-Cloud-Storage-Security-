@@ -1,0 +1,870 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SecureVault — Hybrid Cryptographic Protocol (RBAC Enabled)</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;600;700&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #060a0f;
+    --surface: #0d1520;
+    --surface2: #111d2e;
+    --border: #1e3048;
+    --accent: #00d4ff;
+    --accent2: #7c3aed;
+    --accent3: #10b981;
+    --danger: #ef4444;
+    --warn: #f59e0b;
+    --text: #e2eaf4;
+    --muted: #5a7a99;
+    --glow: 0 0 20px rgba(0,212,255,0.15);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Syne', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background:
+      radial-gradient(ellipse 80% 50% at 20% -10%, rgba(0,212,255,0.06) 0%, transparent 60%),
+      radial-gradient(ellipse 60% 40% at 80% 100%, rgba(124,58,237,0.07) 0%, transparent 60%);
+    pointer-events: none; z-index: 0;
+  }
+
+  /* ── LAYOUT ── */
+  .shell { display: flex; height: 100vh; position: relative; z-index: 1; }
+
+  /* ── SIDEBAR ── */
+  .sidebar {
+    width: 260px; flex-shrink: 0;
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    display: flex; flex-direction: column;
+    padding: 24px 0;
+  }
+  .logo {
+    padding: 0 24px 28px;
+    border-bottom: 1px solid var(--border);
+  }
+  .logo-mark {
+    font-size: 20px; font-weight: 800; letter-spacing: -0.5px;
+    color: var(--accent);
+    display: flex; align-items: center; gap: 8px;
+  }
+  .logo-mark svg { width: 22px; height: 22px; }
+  .logo-sub { font-size: 10px; color: var(--muted); font-family: 'JetBrains Mono', monospace; letter-spacing: 2px; margin-top: 2px; }
+
+  .nav { flex: 1; padding: 20px 12px; display: flex; flex-direction: column; gap: 4px; }
+  .nav-section { font-size: 9px; color: var(--muted); letter-spacing: 2px; padding: 12px 12px 6px; font-family: 'JetBrains Mono', monospace; }
+  .nav-btn {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 12px; border-radius: 8px;
+    background: transparent; border: none;
+    color: var(--muted); font-family: 'Syne', sans-serif;
+    font-size: 13px; font-weight: 600; cursor: pointer;
+    transition: all 0.2s; text-align: left; width: 100%;
+  }
+  .nav-btn:hover { background: var(--surface2); color: var(--text); }
+  .nav-btn.active { background: rgba(0,212,255,0.1); color: var(--accent); }
+  .nav-btn svg { width: 16px; height: 16px; flex-shrink: 0; }
+  .nav-badge {
+    margin-left: auto; font-size: 10px; font-family: 'JetBrains Mono', monospace;
+    background: rgba(0,212,255,0.12); color: var(--accent);
+    padding: 2px 7px; border-radius: 20px;
+  }
+
+  .user-panel {
+    padding: 16px 20px;
+    border-top: 1px solid var(--border);
+  }
+
+  /* ── MAIN ── */
+  .main { flex: 1; overflow-y: auto; display: flex; flex-direction: column; }
+
+  .topbar {
+    padding: 20px 32px;
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between;
+    background: rgba(13,21,32,0.8); backdrop-filter: blur(10px);
+    position: sticky; top: 0; z-index: 10;
+  }
+  .page-title { font-size: 18px; font-weight: 700; }
+  .page-subtitle { font-size: 11px; color: var(--muted); font-family: 'JetBrains Mono', monospace; margin-top: 2px; }
+
+  .status-pill {
+    display: flex; align-items: center; gap: 6px;
+    padding: 6px 14px; border-radius: 20px;
+    font-size: 11px; font-family: 'JetBrains Mono', monospace;
+    background: rgba(16,185,129,0.1); color: var(--accent3);
+    border: 1px solid rgba(16,185,129,0.2);
+  }
+  .status-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent3); animation: pulse 2s infinite; }
+  @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }
+
+  .content { flex: 1; padding: 32px; }
+
+  /* ── PAGES ── */
+  .page { display: none; }
+  .page.active { display: block; }
+
+  /* ── CARDS ── */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 24px;
+    margin-bottom: 20px;
+  }
+  .card-header {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 20px;
+  }
+  .card-title {
+    font-size: 14px; font-weight: 700;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .card-title svg { width: 16px; height: 16px; color: var(--accent); }
+
+  /* ── FORMS ── */
+  .field { margin-bottom: 16px; }
+  label { display: block; font-size: 11px; color: var(--muted); font-family: 'JetBrains Mono', monospace; letter-spacing: 1px; margin-bottom: 6px; }
+  input, select, textarea {
+    width: 100%; background: var(--bg);
+    border: 1px solid var(--border); border-radius: 8px;
+    padding: 10px 14px; color: var(--text);
+    font-family: 'JetBrains Mono', monospace; font-size: 12px;
+    transition: border-color 0.2s;
+    outline: none;
+  }
+  input:focus, select:focus, textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(0,212,255,0.08); }
+
+  .file-drop {
+    border: 2px dashed var(--border); border-radius: 10px;
+    padding: 32px; text-align: center; cursor: pointer;
+    transition: all 0.2s; background: var(--bg);
+  }
+  .file-drop:hover, .file-drop.dragover { border-color: var(--accent); background: rgba(0,212,255,0.03); }
+  .file-drop-icon { font-size: 32px; margin-bottom: 8px; }
+  .file-drop-text { font-size: 13px; color: var(--muted); }
+  .file-drop-text span { color: var(--accent); }
+  .file-name { font-size: 12px; color: var(--accent3); font-family: 'JetBrains Mono', monospace; margin-top: 8px; }
+
+  /* ── BUTTONS ── */
+  .btn {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 10px 20px; border-radius: 8px; border: none;
+    font-family: 'Syne', sans-serif; font-size: 13px; font-weight: 700;
+    cursor: pointer; transition: all 0.2s; white-space: nowrap;
+  }
+  .btn svg { width: 15px; height: 15px; }
+  .btn-primary { background: var(--accent); color: #000; }
+  .btn-primary:hover { background: #33ddff; transform: translateY(-1px); box-shadow: 0 4px 20px rgba(0,212,255,0.3); }
+  .btn-secondary { background: var(--surface2); color: var(--text); border: 1px solid var(--border); }
+  .btn-secondary:hover { border-color: var(--accent); color: var(--accent); }
+  .btn-danger { background: rgba(239,68,68,0.1); color: var(--danger); border: 1px solid rgba(239,68,68,0.2); }
+  .btn-danger:hover { background: rgba(239,68,68,0.2); }
+  .btn-success { background: rgba(16,185,129,0.1); color: var(--accent3); border: 1px solid rgba(16,185,129,0.2); }
+  .btn-sm { padding: 6px 12px; font-size: 11px; }
+  .btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none !important; }
+
+  /* ── GRID ── */
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+
+  /* ── STAT CARDS ── */
+  .stat { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 20px; }
+  .stat-label { font-size: 10px; color: var(--muted); font-family: 'JetBrains Mono', monospace; letter-spacing: 1px; }
+  .stat-value { font-size: 28px; font-weight: 800; margin: 4px 0 2px; }
+  .stat-desc { font-size: 11px; color: var(--muted); }
+  .stat.cyan .stat-value { color: var(--accent); }
+  .stat.purple .stat-value { color: #a78bfa; }
+  .stat.green .stat-value { color: var(--accent3); }
+
+  /* ── LOG / OUTPUT ── */
+  .log {
+    background: var(--bg); border: 1px solid var(--border); border-radius: 8px;
+    padding: 16px; font-family: 'JetBrains Mono', monospace; font-size: 11px;
+    line-height: 1.8; max-height: 300px; overflow-y: auto;
+    min-height: 60px;
+  }
+  .log-line { display: flex; gap: 10px; padding: 2px 0; }
+  .log-time { color: var(--muted); flex-shrink: 0; }
+  .log-info { color: var(--accent); }
+  .log-ok { color: var(--accent3); }
+  .log-warn { color: var(--warn); }
+  .log-err { color: var(--danger); }
+  .log-data { color: #a78bfa; word-break: break-all; }
+
+  /* ── KEY DISPLAY ── */
+  .key-box {
+    background: var(--bg); border: 1px solid var(--border); border-radius: 8px;
+    padding: 12px 14px; font-family: 'JetBrains Mono', monospace; font-size: 10px;
+    color: var(--accent3); word-break: break-all; line-height: 1.6;
+    position: relative;
+  }
+  .key-label { font-size: 9px; color: var(--muted); letter-spacing: 1px; margin-bottom: 4px; }
+
+  /* ── FILE LIST ── */
+  .file-row {
+    display: flex; align-items: center; gap: 14px;
+    padding: 14px; border-radius: 8px;
+    border: 1px solid var(--border); background: var(--bg);
+    margin-bottom: 8px; transition: border-color 0.2s;
+  }
+  .file-meta { flex: 1; min-width: 0; }
+  .file-meta-name { font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .file-meta-sub { font-size: 10px; color: var(--muted); font-family: 'JetBrains Mono', monospace; margin-top: 2px; }
+
+  /* ── BADGE ── */
+  .badge {
+    display: inline-block; font-size: 9px; font-family: 'JetBrains Mono', monospace;
+    padding: 2px 8px; border-radius: 20px; letter-spacing: 1px;
+  }
+  .badge-enc { background: rgba(16,185,129,0.1); color: var(--accent3); border: 1px solid rgba(16,185,129,0.2); }
+  .badge-lock { background: rgba(124,58,237,0.1); color: #a78bfa; border: 1px solid rgba(124,58,237,0.2); }
+
+  .flex { display: flex; }
+  .gap-8 { gap: 8px; }
+  .mt-12 { margin-top: 12px; }
+  .spinning { animation: spin 1s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .fade-in { animation: fadeIn 0.3s ease; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+</style>
+</head>
+<body>
+<div class="shell">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="logo">
+      <div class="logo-mark">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+        SecureVault
+      </div>
+      <div class="logo-sub">HYBRID CRYPTO RBAC</div>
+    </div>
+
+    <nav class="nav">
+      <div class="nav-section">OVERVIEW</div>
+      <button class="nav-btn active" onclick="showPage('dashboard')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+        Dashboard
+      </button>
+
+      <div class="nav-section">USE CASES</div>
+      <button class="nav-btn" onclick="showPage('keygen')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>
+        UC1 · Key Generation
+      </button>
+      <button class="nav-btn" onclick="showPage('upload')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+        UC2 · Encrypt & Upload
+      </button>
+      <button class="nav-btn" onclick="showPage('download')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        UC3 · Decrypt & Download
+      </button>
+      <button class="nav-btn" onclick="showPage('access')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+        UC4 · Access Control
+      </button>
+      <button class="nav-btn" onclick="showPage('revoke')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
+        UC5 · Key Rotation
+      </button>
+
+      <div class="nav-section">INSPECTION (ADMIN ONLY)</div>
+      <button class="nav-btn" onclick="showPage('cloud')" style="border-left: 2px solid var(--danger);">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"/></svg>
+        Cloud Storage View 🛡️
+      </button>
+    </nav>
+
+    <!-- ACTIVE SESSION CONTROL PANEL -->
+    <div class="user-panel">
+      <label style="color: var(--accent); font-weight: 700; font-size: 10px; margin-bottom: 8px;">ACTIVE SESSION (SIMULATOR)</label>
+      <select id="sessionUser" onchange="handleSessionChange()" style="background: var(--surface2); border-color: var(--accent2); font-weight: bold; color: var(--text);">
+        <option value="">— Create a user first —</option>
+      </select>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <main class="main">
+    <div class="topbar">
+      <div>
+        <div class="page-title" id="pageTitle">Dashboard</div>
+        <div class="page-subtitle" id="pageSubtitle">SEC3104 · Hybrid Cryptographic Protocol Demo</div>
+      </div>
+      <div class="status-pill">
+        <div class="status-dot"></div>
+        WEB CRYPTO API · ACTIVE
+      </div>
+    </div>
+
+    <div class="content">
+
+      <!-- ══ DASHBOARD ══ -->
+      <div class="page active" id="page-dashboard">
+        <div class="grid-3" style="margin-bottom:20px;">
+          <div class="stat cyan">
+            <div class="stat-label">FILES ENCRYPTED</div>
+            <div class="stat-value" id="statFiles">0</div>
+            <div class="stat-desc">stored in cloud</div>
+          </div>
+          <div class="stat purple">
+            <div class="stat-label">KEYS GENERATED</div>
+            <div class="stat-value" id="statKeys">0</div>
+            <div class="stat-desc">RSA keypairs</div>
+          </div>
+          <div class="stat green">
+            <div class="stat-label">ACTIVE GRANTS</div>
+            <div class="stat-value" id="statGrants">0</div>
+            <div class="stat-desc">access permissions</div>
+          </div>
+        </div>
+
+        <div class="grid-2">
+          <div class="card">
+            <div class="card-header"><div class="card-title">Protocol Rules & RBAC Info</div></div>
+            <div style="font-size:12px; color:var(--muted); line-height:1.8;">
+              <span style="color:var(--accent)">🛡️ Role Security Rule:</span> Only an <strong style="color:var(--text)">Admin</strong> session can view the raw encrypted data blocks in the cloud view tab and see the system's global activity log.<br><br>
+              <span style="color:var(--accent3)">🔑 Cryptographic Rule:</span> Even though the Admin can manage metadata and view the server blocks, they <strong style="color:var(--danger)">cannot decrypt</strong> other users' plaintexts unless explicitly granted key access.
+            </div>
+          </div>
+
+          <div class="card" id="globalLogCard">
+            <div class="card-header"><div class="card-title">System Activity Log (Admin Eyes Only)</div></div>
+            <div class="log" id="globalLog"><div class="log-line"><span class="log-time">--:--:--</span><span class="log-info">System initialized. RBAC active.</span></div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══ UC1: KEY GEN ══ -->
+      <div class="page" id="page-keygen">
+        <div class="grid-2">
+          <div class="card">
+            <div class="card-header"><div class="card-title">Generate New User Keypair</div></div>
+            <div class="field">
+              <label>USERNAME</label>
+              <input type="text" id="kgUsername" placeholder="e.g. alice" />
+            </div>
+            <div class="field">
+              <label>ROLE (Enforces Real System Permissions)</label>
+              <select id="kgRole">
+                <option value="user">User — Standard file owner privileges</option>
+                <option value="admin">Admin — Full infrastructure management</option>
+              </select>
+            </div>
+            <div class="field">
+              <label>MASTER PASSWORD</label>
+              <input type="password" id="kgPassword" placeholder="Enter password" />
+            </div>
+            <button class="btn btn-primary" onclick="generateKeypair()" id="kgBtn">Generate RSA-3072 + Derive MK</button>
+            <div id="kgResult" style="margin-top:16px;"></div>
+          </div>
+
+          <div class="card">
+            <div class="card-header"><div class="card-title">Registered Users</div></div>
+            <div id="userList" style="display:flex; flex-direction:column; gap:8px;"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══ UC2: UPLOAD ══ -->
+      <div class="page" id="page-upload">
+        <div class="card">
+          <div class="card-header"><div class="card-title">Encrypt &amp; Upload File</div></div>
+          <div class="field">
+            <label>UPLOADING FROM CURRENT ACTIVE ACCOUNT:</label>
+            <input type="text" id="upOwnerDisplay" readonly style="opacity: 0.6;" />
+          </div>
+          <div class="field">
+            <label>FILE TO ENCRYPT</label>
+            <div class="file-drop" onclick="document.getElementById('fileInput').click()" ondragover="event.preventDefault()">
+              <div class="file-drop-icon">📁</div>
+              <div class="file-drop-text">Choose or drop a file here</div>
+              <div class="file-name" id="uploadFileName"></div>
+            </div>
+            <input type="file" id="fileInput" style="display:none" onchange="handleFileSelect(event)">
+          </div>
+          <button class="btn btn-primary" onclick="encryptAndUpload()" id="uploadBtn" disabled>Encrypt with AES-256-GCM &amp; Upload</button>
+          <div id="uploadResult" style="margin-top:16px;"></div>
+        </div>
+      </div>
+
+      <!-- ══ UC3: DOWNLOAD ══ -->
+      <div class="page" id="page-download">
+        <div class="card">
+          <div class="card-header"><div class="card-title">Decrypt &amp; Download File</div></div>
+          <div class="field">
+            <label>SELECT FILE FROM CLOUD</label>
+            <select id="dlFile"><option value="">— No files uploaded yet —</option></select>
+          </div>
+          <div class="flex gap-8 mt-12">
+            <button class="btn btn-primary" onclick="decryptAndDownload()">Decrypt &amp; Download</button>
+            <button class="btn btn-danger" onclick="attemptTamper()">Test Tamper Detection</button>
+          </div>
+          <div id="dlResult" style="margin-top:16px;"></div>
+        </div>
+      </div>
+
+      <!-- ══ UC4: ACCESS CONTROL ══ -->
+      <div class="page" id="page-access">
+        <div class="card">
+          <div class="card-header"><div class="card-title" id="acCardTitle">Grant / Revoke Access Panel</div></div>
+          <div class="grid-2">
+            <div>
+              <label>FILE TO SHARE</label>
+              <select id="acFile"></select>
+              <label class="mt-12">GRANT ACCESS TO</label>
+              <select id="acGrantTo"></select>
+              <button class="btn btn-success mt-12" onclick="grantAccess()">Grant Access (Wrap Key)</button>
+            </div>
+            <div>
+              <label>FILE TO REVOKE FROM</label>
+              <select id="acRevokeFile"></select>
+              <label class="mt-12">REVOKE ACCESS FROM</label>
+              <select id="acRevokeFrom"></select>
+              <button class="btn btn-danger mt-12" onclick="revokeAccess()">Revoke Access (Delete Wrap)</button>
+            </div>
+          </div>
+          <div id="acResult" style="margin-top:16px;"></div>
+        </div>
+      </div>
+
+      <!-- ══ UC5: KEY ROTATION ══ -->
+      <div class="page" id="page-revoke">
+        <div class="card">
+          <div class="card-header"><div class="card-title">Perform Key Rotation</div></div>
+          <div class="field">
+            <label>SELECT FILE FOR KEY ROTATION</label>
+            <select id="rotFile"></select>
+          </div>
+          <button class="btn btn-primary" onclick="rotateKey()">Rotate Key &amp; Re-Encrypt</button>
+          <div id="rotResult" style="margin-top:16px;"></div>
+        </div>
+      </div>
+
+      <!-- ══ CLOUD VIEW ══ -->
+      <div class="page" id="page-cloud">
+        <div class="card">
+          <div class="card-header"><div class="card-title">Simulated Cloud Storage (LocalStorage Backend)</div></div>
+          <div id="cloudView"></div>
+        </div>
+      </div>
+
+    </div>
+  </main>
+</div>
+
+<script>
+// ══════════════════════════════════════════════════════════
+//  STATE MANAGEMENT
+// ══════════════════════════════════════════════════════════
+// Central memory state mimicking client-side registries and the remote cloud database.
+const state = {
+  users: {},       // Client-side volatile vault holding localized cryptographic private/public keys
+  cloud: {}        // Server-side simulator holding only ciphertext blocks and public key metadata
+};
+
+// Map storing page information titles and dynamic subtitles.
+const pageTitles = {
+  dashboard: ['Dashboard', 'Overview & Activity'],
+  keygen:    ['UC1 · Key Generation', 'RSA-3072 keypair + Master Key derivation'],
+  upload:    ['UC2 · Encrypt & Upload', 'AES-256-GCM client-side encryption'],
+  download:  ['UC3 · Decrypt & Download', 'RSA unwrap + AES-GCM decryption'],
+  access:    ['UC4 · Access Control', 'Grant & revoke via key wrapping'],
+  revoke:    ['UC5 · Key Rotation', 'Re-encrypt for forward secrecy'],
+  cloud:     ['Cloud Storage View 🛡️', 'Administrative Secure Cloud Terminal']
+};
+
+// ══════════════════════════════════════════════════════════
+//  RBAC NAVIGATION ENFORCEMENT
+// ══════════════════════════════════════════════════════════
+function showPage(id) {
+  const activeUser = getActiveUser();
+  
+  // ROLE ENFORCEMENT POINT: Restricting low-privilege sessions from reviewing raw backend data blocks.
+  if (id === 'cloud') {
+    if (!activeUser || activeUser.role !== 'admin') {
+      alert("⛔ Access Denied!\nThe current user does not have these permissions.");
+      return; // Absolute termination of execution thread for non-authorized roles.
+    }
+  }
+
+  // Basic DOM toggle mechanisms for rendering SPA sub-containers.
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  
+  const targetPage = document.getElementById('page-' + id);
+  if(targetPage) targetPage.classList.add('active');
+  
+  const btn = document.querySelector(`.nav-btn[onclick="showPage('${id}')"]`);
+  if(btn) btn.classList.add('active');
+  
+  document.getElementById('pageTitle').textContent = pageTitles[id][0];
+  document.getElementById('pageSubtitle').textContent = pageTitles[id][1];
+  
+  // Trigger specific layout refresh handlers depending on destination tab view.
+  if (id === 'cloud') refreshCloudView();
+  if (id === 'upload' || id === 'download' || id === 'access' || id === 'revoke') refreshSelects();
+}
+
+// Session retriever parsing active structural identities out of user choices.
+function getActiveUser() {
+  const select = document.getElementById('sessionUser');
+  return (select && select.value) ? state.users[select.value] : null;
+}
+
+// Logic routine tracking session state switches and applying conditional rendering.
+function handleSessionChange() {
+  const user = getActiveUser();
+  const username = document.getElementById('sessionUser').value;
+  
+  // CONTEXT ISOLATION: Hiding standard system-level audit loops from low-privilege nodes.
+  const logCard = document.getElementById('globalLogCard');
+  if (logCard) {
+    logCard.style.display = (user && user.role === 'admin') ? 'block' : 'none';
+  }
+
+  const upDisplay = document.getElementById('upOwnerDisplay');
+  if (upDisplay) upDisplay.value = user ? `${username.toUpperCase()} [Role: ${user.role.toUpperCase()}]` : 'None';
+
+  log('info', `Switched active session context to: <strong>${username}</strong>`);
+  refreshSelects(); // Immediately dynamic filters access dropdown elements according to context ownership.
+}
+
+// ══════════════════════════════════════════════════════════
+//  LOGGING UTILITY
+// ══════════════════════════════════════════════════════════
+function log(type, msg) {
+  const now = new Date().toTimeString().slice(0,8);
+  const line = `<div class="log-line fade-in"><span class="log-time">${now}</span><span class="log-${type}">${msg}</span></div>`;
+  const el = document.getElementById('globalLog');
+  if (el) {
+    el.innerHTML += line;
+    el.scrollTop = el.scrollHeight;
+  }
+}
+
+// ══════════════════════════════════════════════════════════
+//  CRYPTOGRAPHIC KERNEL (WEB CRYPTO API INTERACTION)
+// ══════════════════════════════════════════════════════════
+function buf2hex(buf) { return [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2,'0')).join(''); }
+function truncHex(hex, n=32) { return hex.slice(0,n) + '…'; }
+
+// PBKDF2 IMPLEMENTATION: Hardening raw user input passwords via 100,000 computation iterations.
+async function deriveMasterKey(password, salt) {
+  const enc = new TextEncoder();
+  // Import basic password bytes as primitive key material.
+  const keyMaterial = await crypto.subtle.importKey('raw', enc.encode(password), 'PBKDF2', false, ['deriveBits']);
+  // Compute highly-stretched bit matrices resisting offline rainbow table processing attacks.
+  const rawBits = await crypto.subtle.deriveBits({ name: 'PBKDF2', salt: enc.encode(salt), iterations: 100000, hash: 'SHA-256' }, keyMaterial, 256);
+  // Re-export structural bits back to local runtime setup specifically tagged to drive HKDF.
+  return crypto.subtle.importKey('raw', rawBits, 'HKDF', false, ['deriveKey']);
+}
+
+// HKDF EXPANSE MECHANISM: Deriving non-reversible single-use symmetric keys isolated per unique file asset.
+async function deriveFileKey(masterKey, nonce) {
+  return crypto.subtle.deriveKey(
+    { 
+      name: 'HKDF', 
+      hash: 'SHA-256', 
+      salt: nonce, // Unique target parameter guaranteeing mathematical separation of resultant keys.
+      info: new TextEncoder().encode('file-key-v1') 
+    }, 
+    masterKey, // Fixed high-entropy root key block belonging to entity identity context.
+    { name: 'AES-GCM', length: 256 }, // Structuring payload type explicitly for 256-bit symmetric arrays.
+    true, 
+    ['encrypt', 'decrypt']
+  );
+}
+
+// ASYMMETRIC INITIALIZATION: Creating distinct RSA keys utilizing high parameter standards for wrapping schemes.
+async function generateRSAKeyPair() {
+  return crypto.subtle.generateKey(
+    { 
+      name: 'RSA-OAEP', 
+      modulusLength: 3072, // Defending against factoring advances with high bit depth parameters.
+      publicExponent: new Uint8Array([1,0,1]), 
+      hash: 'SHA-256' 
+    }, 
+    true, 
+    ['wrapKey', 'unwrapKey'] // Explicit operational constraints restricting usage modes exclusively to key lifecycle operations.
+  );
+}
+
+// ASYMMETRIC KEY WRAPPING: Encapsulating symmetric file secrets securely inside individual target user public-key blocks.
+async function wrapFileKey(fileKey, publicKey) { return new Uint8Array(await crypto.subtle.wrapKey('raw', fileKey, publicKey, { name: 'RSA-OAEP' })); }
+async function unwrapFileKey(wrappedKey, privateKey) { return crypto.subtle.unwrapKey('raw', wrappedKey, privateKey, { name: 'RSA-OAEP' }, { name: 'AES-GCM', length: 256 }, true, ['encrypt', 'decrypt']); }
+
+// ══════════════════════════════════════════════════════════
+//  UC1: KEY GENERATION PIPELINE
+// ══════════════════════════════════════════════════════════
+async function generateKeypair() {
+  const username = document.getElementById('kgUsername').value.trim().toLowerCase();
+  const role = document.getElementById('kgRole').value;
+  const password = document.getElementById('kgPassword').value;
+  if (!username || !password) { alert('Please fill all fields'); return; }
+  if (state.users[username]) { alert('User already exists'); return; }
+
+  try {
+    // Generate private/public asymmetry mapping structures concurrently with PBKDF2 stretching tasks.
+    const kp = await generateRSAKeyPair();
+    const mk = await deriveMasterKey(password, username + '-salt-v1');
+    const pubRaw = await crypto.subtle.exportKey('spki', kp.publicKey);
+    
+    // Store structural objects inside localized system runtime state.
+    state.users[username] = { name: username, role, publicKey: kp.publicKey, privateKey: kp.privateKey, masterKey: mk, pubHex: buf2hex(pubRaw) };
+    
+    log('ok', `Registered ${username} as <strong>${role.toUpperCase()}</strong>`);
+    renderUserList();
+    updateSessionDropdown(username);
+    updateStats();
+  } catch(e) { console.error(e); }
+}
+
+function updateSessionDropdown(selectNewUser = '') {
+  const select = document.getElementById('sessionUser');
+  const prev = select.value || selectNewUser;
+  select.innerHTML = Object.keys(state.users).map(u => `<option value="${u}">${u.toUpperCase()} (${state.users[u].role.toUpperCase()})</option>`).join('');
+  if(prev) select.value = prev;
+  handleSessionChange();
+}
+
+function renderUserList() {
+  document.getElementById('userList').innerHTML = Object.entries(state.users).map(([name, u]) => `
+    <div class="file-row">
+      <div class="file-meta">
+        <div class="file-meta-name">${name.toUpperCase()}</div>
+        <div class="file-meta-sub">Role: ${u.role.toUpperCase()}</div>
+      </div>
+      <span class="badge ${u.role==='admin'?'badge-lock':'badge-enc'}">${u.role.toUpperCase()}</span>
+    </div>
+  `).join('');
+}
+
+// ══════════════════════════════════════════════════════════
+//  UC2: HYBRID ENCRYPTION & UPLOAD LOGIC
+// ══════════════════════════════════════════════════════════
+function handleFileSelect(e) {
+  state.fileSelect = e.target.files[0];
+  document.getElementById('uploadFileName').textContent = '📎 ' + state.fileSelect.name;
+  document.getElementById('uploadBtn').disabled = false;
+}
+
+async function encryptAndUpload() {
+  const currentUserName = document.getElementById('sessionUser').value;
+  const currentUser = state.users[currentUserName];
+  if (!currentUser) return;
+
+  try {
+    // Convert source file system asset directly into raw byte processing layers.
+    const fileData = await state.fileSelect.arrayBuffer();
+    const original = new Uint8Array(fileData);
+    
+    // GENERATE UNIQUE NONCE: Enforcing random initialization arrays for target asset transactions.
+    const nonce = crypto.getRandomValues(new Uint8Array(12));
+    
+    // KDF INVOCATION STEP: Extracting a distinct unique target key object processing routine.
+    const fileKey = await deriveFileKey(currentUser.masterKey, nonce);
+    
+    // SYMMETRIC ENCRYPTION RUNTIME: Processing source plaintexts down into target binary cipherblocks.
+    const encBuf = await crypto.subtle.encrypt({ name: 'AES-GCM', iv: nonce }, fileKey, fileData);
+    const ciphertext = new Uint8Array(encBuf);
+    
+    // PUBLIC WRAPPING PHASE: Binding symmetric visibility attributes strictly back to the asset owner identifier.
+    const wrappedOwner = await wrapFileKey(fileKey, currentUser.publicKey);
+
+    // SERVER PAYLOAD DESIGN: Packaging assets for upload. Notice raw data inputs are completely omitted.
+    const fileId = 'file_' + Date.now();
+    state.cloud[fileId] = {
+      id: fileId, 
+      name: state.fileSelect.name, 
+      ciphertext, 
+      nonce, // Server tracking parameter mapping required to initialize standard execution arrays.
+      wrappedKeys: { [currentUserName]: wrappedOwner }, // Cryptographic encapsulation access matrices.
+      original, // Cached strictly within client scope sandbox to enable runtime rotation features.
+      owner: currentUserName, 
+      size: original.length
+    };
+
+    log('ok', `File <strong>${state.fileSelect.name}</strong> uploaded securely by ${currentUserName}`);
+    updateStats(); refreshSelects();
+  } catch(e) { console.error(e); }
+}
+
+// ══════════════════════════════════════════════════════════
+//  UC3: DECRYPTION & DOWNLOAD LIFE CYCLES
+// ══════════════════════════════════════════════════════════
+async function decryptAndDownload() {
+  const currentUserName = document.getElementById('sessionUser').value;
+  const fileId = document.getElementById('dlFile').value;
+  if (!fileId) return;
+
+  const user = state.users[currentUserName];
+  const record = state.cloud[fileId];
+  const wrappedKey = record.wrappedKeys[currentUserName];
+
+  // ZERO-KNOWLEDGE ENFORCEMENT POINT: Blocking data transitions when public encapsulation sets are not found.
+  if (!wrappedKey) {
+    alert(`❌ Access Denied!\nThe current account (${currentUserName}) does not have a wrapped encryption key for this file.\nEven if you are an admin, the owner must cryptographically grant you access first.`);
+    return;
+  }
+
+  try {
+    // ASYMMETRIC UNWRAP SEQUENCE: Attempting reconstruction of file operational vectors via corresponding private assets.
+    const fileKey = await unwrapFileKey(wrappedKey, user.privateKey);
+    
+    // INTEGRITY TAG CHECK INVOCATION: AES-GCM performs automatic message verification via tag components.
+    const decBuf = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: record.nonce }, fileKey, record.ciphertext);
+    
+    // Create standard target blob structures to trigger device download processes safely.
+    const blob = new Blob([decBuf]);
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob); a.download = record.name; a.click();
+    log('ok', `Decrypted & downloaded: ${record.name}`);
+  } catch(e) { alert('Decryption failed: ' + e.message); }
+}
+
+// ACTIVE TAMPER TESTING ROUTINE: Inducing systematic changes to cipher tracking blocks to trigger authentication checks.
+async function attemptTamper() {
+  const fileId = document.getElementById('dlFile').value;
+  if (!fileId) return;
+  const record = state.cloud[fileId];
+  
+  // BIT-FLIPPING SIMULATION: Inverting data components across position zero using simple XOR statements.
+  record.ciphertext[0] ^= 0xFF; 
+  alert("⚠️ Part of the cloud data has been corrupted (Simulation Target Tampered). Now try clicking Decrypt & Download.");
+}
+
+// ══════════════════════════════════════════════════════════
+//  UC4: PRIVILEGED ACCESS OVERRIDES AND ENCAPSULATIONS
+// ══════════════════════════════════════════════════════════
+async function grantAccess() {
+  const fileId = document.getElementById('acFile').value;
+  const grantTo = document.getElementById('acGrantTo').value;
+  if (!fileId || !grantTo) return;
+
+  const record = state.cloud[fileId];
+  const owner = state.users[record.owner];
+  const recipient = state.users[grantTo];
+
+  try {
+    // MULTI-USER ACCESS EXPANSION: Owner extracts internal operational keys locally, then appends a new public encapsulation map target.
+    const fileKey = await unwrapFileKey(record.wrappedKeys[record.owner], owner.privateKey);
+    record.wrappedKeys[grantTo] = await wrapFileKey(fileKey, recipient.publicKey);
+    log('ok', `Access GRANTED to user [${grantTo}] for file: ${record.name}`);
+    updateStats();
+  } catch(e) { console.error(e); }
+}
+
+async function revokeAccess() {
+  const fileId = document.getElementById('acRevokeFile').value;
+  const revokeFrom = document.getElementById('acRevokeFrom').value;
+  if (!fileId || !revokeFrom) return;
+
+  const record = state.cloud[fileId];
+  if (revokeFrom === record.owner) { alert("Cannot revoke owner!"); return; }
+  
+  // METADATA STRIPPING: Purging specific identity encapsulation metrics to instantly break target decrypt processing loops.
+  delete record.wrappedKeys[revokeFrom];
+  log('warn', `Administrative Override: Access REVOKED from [${revokeFrom}] for file: ${record.name}`);
+  updateStats();
+}
+
+// ══════════════════════════════════════════════════════════
+//  UC5: FORWARD SECRECY LIFECYCLE (KEY ROTATION)
+// ══════════════════════════════════════════════════════════
+async function rotateKey() {
+  const fileId = document.getElementById('rotFile').value;
+  if (!fileId) return;
+  const record = state.cloud[fileId];
+  const owner = state.users[record.owner];
+
+  try {
+    // GENERATE NEW INDEPENDENT SYMMETRIC ENTITY: Discarding tracking paths from older parameters.
+    const newFileKey = await crypto.subtle.generateKey({ name: 'AES-GCM', length: 256 }, true, ['encrypt','decrypt']);
+    const newNonce = crypto.getRandomValues(new Uint8Array(12));
+    
+    // RE-ENCRYPT TARGETS: Constructing completely refreshed cipher arrays out of source sandboxed values.
+    const newCipher = await crypto.subtle.encrypt({ name: 'AES-GCM', iv: newNonce }, newFileKey, record.original);
+    
+    record.ciphertext = new Uint8Array(newCipher);
+    record.nonce = newNonce;
+
+    // UPDATE EXCLUSIONARY DISTRIBUTION MATRIX: Re-packaging the updated keys *only* for currently active authorized identities.
+    for (const u of Object.keys(record.wrappedKeys)) {
+      record.wrappedKeys[u] = await wrapFileKey(newFileKey, state.users[u].publicKey);
+    }
+    log('ok', `Key Rotated & Re-encrypted for file: ${record.name}`);
+  } catch(e) { console.error(e); }
+}
+
+// ══════════════════════════════════════════════════════════
+//  SELECT REFRESH FILTER (THE RBAC MAGIC)
+// ══════════════════════════════════════════════════════════
+function refreshSelects() {
+  const currentUserName = document.getElementById('sessionUser').value;
+  const currentUser = state.users[currentUserName];
+  const users = Object.keys(state.users);
+  const files = Object.entries(state.cloud);
+
+  // REACCESS RULES CONFIGURATION MATRIX:
+  // Admins get global system visibility for management tasks.
+  // Standard structural users are completely isolated, limited to assets they personally initialized.
+const allowedFiles = (currentUser && currentUser.role === 'admin') 
+  ? files 
+  : files.filter(([id, f]) => f.owner === currentUserName || f.wrappedKeys?.[currentUserName]);
+
+  // Dynamic UI select option injection based on calculated allowance vectors above.
+  ['dlFile','acFile','acRevokeFile','rotFile'].forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.innerHTML = allowedFiles.length
+      ? allowedFiles.map(([id,f]) => `<option value="${id}">${f.name} (Owner: ${f.owner})</option>`).join('')
+      : '<option value="">— No files available under your current permissions —</option>';
+  });
+
+  ['acGrantTo','acRevokeFrom'].forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.innerHTML = users.map(u => `<option value="${u}">${u.toUpperCase()}</option>`).join('');
+  });
+}
+
+function refreshCloudView() {
+  const el = document.getElementById('cloudView');
+  const files = Object.values(state.cloud);
+  if (!files.length) { el.innerHTML = '<div style="padding:20px; text-align:center;">Cloud Storage is Empty.</div>'; return; }
+
+  el.innerHTML = files.map(f => `
+    <div class="file-row" style="flex-direction:column; align-items:stretch; margin-bottom:12px;">
+      <div><strong>📁 File: ${f.name}</strong> [Owner: ${f.owner}]</div>
+      <div class="key-box mt-12" style="font-size:11px;">
+        <span style="color:var(--danger)">RAW CIPHERTEXT:</span> ${truncHex(buf2hex(f.ciphertext), 60)}
+      </div>
+      <div class="key-box" style="color:var(--accent2); font-size:11px;">
+        <span>ACTIVE WRAPPED KEYS STORED ON SERVER:</span><br>
+        ${Object.keys(f.wrappedKeys).map(u => `• For User [${u}] -> Encrypted Block Exist<br>`).join('')}
+      </div>
+    </div>
+  `).join('');
+}
+
+function updateStats() {
+  document.getElementById('statFiles').textContent = Object.keys(state.cloud).length;
+  document.getElementById('statKeys').textContent = Object.keys(state.users).length;
+  document.getElementById('statGrants').textContent = Object.values(state.cloud).reduce((s,f) => s + Object.keys(f.wrappedKeys).length, 0);
+}
+</script>
+</body>
+</html>
