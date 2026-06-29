@@ -3,7 +3,7 @@ A client-side hybrid cryptographic protocol for secure cloud storage with a zero
 
 ⸻
 
-Overview
+## Overview
 
 SecureVault is a browser-based secure cloud storage protocol that encrypts files locally before upload. The cloud provider stores only encrypted data and wrapped encryption keys, ensuring that plaintext files and private keys never leave the client.
 
