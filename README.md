@@ -11,19 +11,20 @@ The protocol combines symmetric and asymmetric cryptography to support secure st
 
 ⸻
 
-Cryptographic Design
+## Cryptographic Design
 
-Component	Algorithm	Purpose
-File Encryption	AES-256-GCM	Confidentiality and Integrity
-Key Wrapping	RSA-OAEP (3072-bit)	Secure key distribution
-Master Key Derivation	PBKDF2-SHA256 (100,000 iterations)	Password-based key derivation
-File Key Derivation	HKDF-SHA256	Per-file key generation
-Integrity Verification	AES-GCM Authentication Tag	Tamper detection
-
+| Component | Algorithm | Purpose |
+|-----------|-----------|---------|
+| File Encryption | AES-256-GCM | Confidentiality and Integrity |
+| Key Wrapping | RSA-OAEP (3072-bit) | Secure key distribution |
+| Master Key Derivation | PBKDF2-SHA256 (100,000 iterations) | Password-based key derivation |
+| File Key Derivation | HKDF-SHA256 | Per-file key generation |
+| Integrity Verification | AES-GCM Authentication Tag | Tamper detection |
 ⸻
 
-System Architecture
+## System Architecture
 
+```text
 Trusted Client
 │
 ├── Web Crypto API
@@ -42,8 +43,7 @@ Untrusted Cloud
 ├── Encrypted Files
 ├── Wrapped Keys
 └── Metadata & Access Control
-
-⸻
+``` 
 
 Protocol Workflow
 
