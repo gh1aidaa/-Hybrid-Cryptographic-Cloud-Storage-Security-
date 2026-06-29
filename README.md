@@ -72,25 +72,26 @@ Security Features
 
 ⸻
 
-Security Evaluation
+## Security Evaluation
 
-Scenario	Result
-Unauthorized access	Blocked
-Ciphertext tampering	Detected
-Replay attack	Prevented
-Revoked user access	Blocked after key rotation
-Incorrect password	Authentication failed
+| Scenario | Result |
+|----------|--------|
+| Unauthorized access | Blocked |
+| Ciphertext tampering | Detected |
+| Replay attack | Prevented |
+| Revoked user access | Blocked after key rotation |
+| Incorrect password | Authentication failed |
 
 ⸻
 
-Performance
+## Performance
 
-Operation	Average Time
-RSA-3072 Key Generation	~2.3 ms
-AES-GCM Encryption (1 KB)	~0.15 ms
-AES-GCM Decryption (1 KB)	~0.12 ms
-Complete Protocol Execution	~8.4 ms
-
+| Operation | Average Time |
+|-----------|--------------|
+| RSA-3072 Key Generation | ~2.3 ms |
+| AES-GCM Encryption (1 KB) | ~0.15 ms |
+| AES-GCM Decryption (1 KB) | ~0.12 ms |
+| Complete Protocol Execution | ~8.4 ms |
 ⸻
 
 Technologies
